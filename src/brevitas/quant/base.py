@@ -44,13 +44,13 @@ from dependencies import this, value
 from brevitas.inject import ExtendedInjector
 from brevitas.inject.enum import ScalingImplType, StatsOp, RestrictValueType
 from brevitas.inject.enum import QuantType, BitWidthImplType, FloatToIntImplType
-from brevitas.core.zero_point import ZeroZeroPoint, MinUintZeroPoint
+from brevitas.core.zero_point import ZeroZeroPoint, RuntimeZeroPoint
 from brevitas.core.zero_point import ParameterFromRuntimeZeroPoint
 from brevitas.core.quant import ClampedBinaryQuant
 from brevitas.core.scaling import IntScaling, ParameterScaling, StatsFromParameterScaling
 from brevitas.core.scaling import SCALING_STATS_REDUCE_DIM, SCALAR_SHAPE
 from brevitas.core.restrict_val import FloatRestrictValue
-from brevitas.core.stats import AbsMaxL2, NegativeMinOrZero
+from brevitas.core.stats import AbsMaxL2, NegativeMinOrZero, NegativePercentileOrZero
 from brevitas.core.function_wrapper.ops_ste import CeilSte
 from brevitas.core.bit_width import BitWidthConst
 from brevitas.core.quant.int import DecoupledRescalingIntQuant
@@ -65,6 +65,7 @@ __all__ = [
     'MaxStatsScaling',
     'MinMaxStatsScaling',
     'ParamFromRuntimePercentileScaling',
+    'ParamFromRuntimePercentileIntervalScaling',
     'ParamFromRuntimeMinMaxScaling',
     'ParamMinMaxInitScaling',
     'IntQuant',
@@ -72,6 +73,7 @@ __all__ = [
     'UintQuant',
     'ShiftedMinUintQuant',
     'ShiftedRuntimeMinToUintQuant',
+    'ShiftedParamFromPercentileUintQuant',
     'PerChannelFloatScaling8bit',
     'PerTensorFloatScaling8bit',
     'PerTensorPoTScaling8bit',
@@ -102,7 +104,7 @@ class ParamFromRuntimePercentileScaling(ExtendedInjector):
     """
     scaling_impl_type = ScalingImplType.PARAMETER_FROM_STATS
     scaling_stats_op = StatsOp.PERCENTILE
-    percentile_q = 99.999
+    high_percentile_q = 99.999
     collect_stats_steps = 300
     scaling_min_val = 1e-10
 
@@ -112,6 +114,17 @@ class ParamFromRuntimeMinMaxScaling(ExtendedInjector):
     """
     scaling_impl_type = ScalingImplType.PARAMETER_FROM_STATS
     scaling_stats_op = StatsOp.MIN_MAX
+    collect_stats_steps = 300
+    scaling_min_val = 1e-10
+    
+    
+class ParamFromRuntimePercentileIntervalScaling(ExtendedInjector):
+    """
+    """
+    scaling_impl_type = ScalingImplType.PARAMETER_FROM_STATS
+    scaling_stats_op = StatsOp.PERCENTILE_INTERVAL
+    high_percentile_q = 99.999
+    low_percentile_q = 0.001
     collect_stats_steps = 300
     scaling_min_val = 1e-10
 
@@ -163,12 +176,13 @@ class ShiftedMinUintQuant(ExtendedInjector):
     float_to_int_impl_type = FloatToIntImplType.ROUND
     narrow_range = False
     signed = False
-    zero_point_impl = MinUintZeroPoint
+    zero_point_impl = RuntimeZeroPoint
+    zero_point_stats_impl = NegativeMinOrZero
     zero_point_shape = this.scaling_shape
     zero_point_stats_input_view_shape_impl = this.scaling_stats_input_view_shape_impl
 
 
-class ShiftedRuntimeMinToUintQuant(ExtendedInjector):
+class ShiftedParamFromPercentileUintQuant(ExtendedInjector):
     """
     """
     quant_type = QuantType.INT
@@ -177,7 +191,8 @@ class ShiftedRuntimeMinToUintQuant(ExtendedInjector):
     narrow_range = False
     signed = False
     zero_point_impl = ParameterFromRuntimeZeroPoint
-    zero_point_stats_impl = NegativeMinOrZero
+    zero_point_stats_impl = NegativePercentileOrZero
+    low_percentile_q = 0.001
     zero_point_shape = this.scaling_shape
     zero_point_stats_input_view_shape_impl = this.scaling_stats_input_view_shape_impl
     

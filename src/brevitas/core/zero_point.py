@@ -71,29 +71,30 @@ class ZeroZeroPoint(brevitas.jit.ScriptModule):
         return self.zero_point()
 
 
-class MinUintZeroPoint(brevitas.jit.ScriptModule):
+class RuntimeZeroPoint(brevitas.jit.ScriptModule):
     __constants__ = ['zero_point_shape']
 
     def __init__(
             self,
             int_quant: Module,
             zero_point_stats_input_view_shape_impl: Module,
-            zero_point_shape: Tuple[int, ...],
-            stats_reduce_dim: Optional[int]) -> None:
-        super(MinUintZeroPoint, self).__init__()
+            zero_point_stats_impl: Module,
+            zero_point_shape: Tuple[int, ...]) -> None:
+        super(RuntimeZeroPoint, self).__init__()
         self.zero_point_shape = zero_point_shape
         self.int_quant = int_quant
         self.stats_input_view_shape_impl = zero_point_stats_input_view_shape_impl
-        self.negative_min_or_zero = NegativeMinOrZero(stats_reduce_dim)
+        self.zero_point_stats_impl = zero_point_stats_impl
 
     @brevitas.jit.script_method
     def forward(self, x: Tensor, scale: Tensor, bit_width: Tensor) -> Tensor:
-        x = x * torch.ones(self.zero_point_shape) # Workaround during export_mode, when the x is a stateless buffer rather then the weights
+        # Workaround for when the x is a stateless buffer rather then the tensor to q
+        x = x * torch.ones(self.zero_point_shape) 
         stats_input = self.stats_input_view_shape_impl(x)
-        min_val = self.negative_min_or_zero(stats_input)
-        min_val = min_val.view(self.zero_point_shape)
+        stats = self.zero_point_stats_impl = self.zero_point_stats_impl(stats_input)
+        stats = stats.view(self.zero_point_shape)
         min_int = self.int_quant.min_int(bit_width)
-        out = self.int_quant(scale, min_int, bit_width, - min_val)
+        out = self.int_quant(scale, min_int, bit_width, - stats)
         return out
 
 

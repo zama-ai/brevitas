@@ -52,8 +52,8 @@ __all__ = [
 
 
 class ShiftedUint8ActPerTensorFloat(
-    ShiftedRuntimeMinToUintQuant,
-    ParamFromRuntimeMinMaxScaling,
+    ShiftedParamFromPercentileUintQuant,
+    ParamFromRuntimePercentileScaling,
     PerTensorFloatScaling8bit,
     ActQuantSolver):
     """
