@@ -72,7 +72,6 @@ __all__ = [
     'NarrowIntQuant',
     'UintQuant',
     'ShiftedMinUintQuant',
-    'ShiftedRuntimeMinToUintQuant',
     'ShiftedParamFromPercentileUintQuant',
     'PerChannelFloatScaling8bit',
     'PerTensorFloatScaling8bit',
