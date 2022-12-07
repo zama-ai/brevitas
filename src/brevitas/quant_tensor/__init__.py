@@ -86,16 +86,22 @@ class QuantTensor(QuantTensorBase):
 
     def __new__(
             cls, value, scale=None, zero_point=None, bit_width=None, signed=None, training=None):
+
+        def copy_value(value, dtype):
+            if isinstance(value, torch.Tensor):
+                return value.clone().detach().to(dtype)
+            return torch.tensor(value, dtype=dtype)
+
         if scale is not None and not isinstance(scale, torch.Tensor):
-            scale = torch.tensor(scale, dtype=torch.float)
+            scale = copy_value(scale, dtype=torch.float)
         if zero_point is not None and not isinstance(zero_point, torch.Tensor):
-            zero_point = torch.tensor(zero_point, dtype=torch.float)
+            zero_point = copy_value(zero_point, dtype=torch.float)
         if bit_width is not None and not isinstance(bit_width, torch.Tensor):
-            bit_width = torch.tensor(bit_width, dtype=torch.float)
+            bit_width = copy_value(bit_width, dtype=torch.float)
         if signed is not None:
-            signed = torch.tensor(signed, dtype=torch.bool)
+            signed = copy_value(signed, dtype=torch.bool)
         if training is not None:
-            training = torch.tensor(training, dtype=torch.bool)
+            training = copy_value(training, dtype=torch.bool)
         return super().__new__(cls, value, scale, zero_point, bit_width, signed, training)
 
     @property
